@@ -17,10 +17,14 @@ class RSS_Crawler {
 
 	public function __construct ($url) {
 		$feedURL = $url;
-		$count = 0;
-		$header = new stdClass();
-		$item[] = new stdClass();
-		$this->capture($feedURL);
+		if ($feedURL == NULL) {
+			echo ">> Need an argument.\n Example: \$test = new RSS_Crawler(\"http://chinese.engadget.com/rss.xml\");";
+		} else {
+			$count = 0;
+			$header = new stdClass();
+			$item[] = new stdClass();
+			$this->capture($feedURL);
+		}
 	}
 
 	/**
