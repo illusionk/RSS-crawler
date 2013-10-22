@@ -29,6 +29,7 @@ class RSS_Crawler {
 	private $count;
 
 	public function __construct ($url) {
+		global $count, $header, $content;
 		$feedURL = $url;
 		if ($feedURL == NULL) {
 			echo ">> Need an argument.\n Example: \$test = new RSS_Crawler(\"http://chinese.engadget.com/rss.xml\");";
