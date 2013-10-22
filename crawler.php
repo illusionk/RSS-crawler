@@ -3,7 +3,7 @@
 echo "Initiating...\n";
 
 /* Connention test, should remove after publish */
-$test = new RSS_Crawler("http://udn.com/udnrss/BREAKINGNEWS1.xml");
+$test = new RSS_Crawler("http://chinese.engadget.com/rss.xml");
 /* RSS FEED INFORMATION */
 echo "-- RSS information --\n";
 echo "Title: ".$test->getHeader()->title."\n";
@@ -17,6 +17,12 @@ if ($test->getHeader()->pubDate != NULL)
 /* RSS CONTENT INFORMATION */
 echo "-- RSS content --\n";
 echo "Amount: ".$test->getContentCount()."\n";
+echo "New Articles:\n";
+if ($test->getUncachedContent() == NULL) {
+	echo "Nothing new.\n";
+} else {
+	print_r($test->getUncachedContent());
+}
 
 class RSS_Crawler {
 	/* cURL option */
@@ -27,6 +33,7 @@ class RSS_Crawler {
 	private $header;
 	private $content;
 	private $count;
+	private $uncachedContent;
 
 	public function __construct ($url) {
 		global $count, $header, $content;
@@ -37,6 +44,7 @@ class RSS_Crawler {
 			$count = 0;
 			$header = new stdClass();
 			$content[] = new stdClass();
+			$uncachedContent[] = new stdClass();
 			$this->capture($feedURL);
 		}
 	}
@@ -104,6 +112,8 @@ class RSS_Crawler {
 	*		Exist: Compare local file and RSS content if pubDate are same?
 	*/
 	private function checkExist($rss) {
+		global $uncachedContent;
+
 		echo "\n>> Compare to exist file\n";
 		/* check site cache exist? */
 		$filename = md5($rss->channel->link).".json";
@@ -114,6 +124,7 @@ class RSS_Crawler {
 			fwrite($fp, json_encode($rss->channel));
 			fclose($fp);
 			echo "Saved!\n";
+			$uncachedContent = $this->uncachedContent(NULL, $rss);
 		} else {
 			$json = json_decode(file_get_contents($filename), false);
 			if ($this->isUpdated($json, $rss) == false) {
@@ -121,6 +132,9 @@ class RSS_Crawler {
 				fwrite($fp, json_encode($rss->channel));
 				fclose($fp);
 				echo "Local file has been updated!\n";
+
+				// Get uncached content.
+				$uncachedContent = $this->uncachedContent($json, $rss);
 			}
 		}
 	}
@@ -174,6 +188,35 @@ class RSS_Crawler {
 	public function getContent() {
 		global $content;
 		return $content;
+	}
+
+	/**
+	*	Get uncached RSS content
+	*
+	*	Post:	Return an object array of RSS content which hasn't been cached. return NULL if nothing new.
+	*/
+	private function uncachedContent($local, $rss) {
+		global $count;
+		$uncachedContent[] = new stdClass();
+
+		if($this->isUpdated($local, $rss) == true) {
+			echo "Nothing new.\n";
+			return NULL;
+		} else {
+			for ($i = 0; $i < $count; $i++) {
+				if ($local->item[$i]->pubDate != $rss->channel->item[$i]->pubDate) {
+					$uncachedContent[$i] = clone $rss->channel->item[$i];
+				} else {
+					break;
+				}
+			}
+			return $uncachedContent;
+		}
+	}
+
+	public function getUncachedContent() {
+		global $uncachedContent;
+		return $uncachedContent;
 	}
 }
 ?>
