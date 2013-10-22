@@ -13,10 +13,10 @@ $item[] = new stdClass();
 capture($feedURL);
 
 /************************************************************************************/
-/*	capture																			*/
-/*	Precondition: give an argument $URL 											*/
-/*		$URL: URL of RSS feed.														*/
-/*	Postcondition: capture RSS feed content 										*/
+//	capture	
+//	Precondition: give an argument $URL
+//		$URL: URL of RSS feed.
+//	Postcondition: capture RSS feed content.
 /************************************************************************************/
 function capture($URL) {
 	/* initialate */
@@ -61,11 +61,11 @@ function capture($URL) {
 }
 
 /************************************************************************************/
-/*	checkExist																		*/
-/*	Precondition: give an argument rss which is an object transform from RSS XML 	*/
-/*	Postcondition: check the file of RSS feed exist?						 		*/
-/*		Not exist: Store current RSS content.									 	*/
-/*		Exist: Compare local file and RSS content if pubDate are same?				*/
+//	checkExist
+//	Precondition: give an argument rss which is an object transform from RSS XML
+//	Postcondition: check the file of RSS feed exist?
+//		Not exist: Store current RSS content.
+//		Exist: Compare local file and RSS content if pubDate are same?
 /************************************************************************************/
 function checkExist($rss) {
 	echo "\nCompare to exist file\n";
@@ -88,13 +88,13 @@ function checkExist($rss) {
 }
 
 /************************************************************************************/
-/*	isUpdated	 																	*/
-/*	Precondition: Give two argument	$local, $rss.							 		*/
-/*		$local: Object array of local cache file after json decode.					*/
-/*		$rss:	Object array of newest RSS feed content.							*/
-/*	Postcondition: Compare local and RSS feed newest pubDate				 		*/
-/*		Same: return true. local and RSS feed are consistent.					 	*/
-/*		Different: return false. RSS feed has new content.							*/
+//	isUpdated
+//	Precondition: Give two argument	$local, $rss.
+//		$local: Object array of local cache file after json decode.
+//		$rss:	Object array of newest RSS feed content.
+//	Postcondition: Compare local and RSS feed newest pubDate
+//		Same: return true. local and RSS feed are consistent.
+//		Different: return false. RSS feed has new content.
 /************************************************************************************/
 function isUpdated($local, $rss) {
 	echo "Local: ".$local->item[0]->pubDate." // Newest: ".$rss->channel->item[0]->pubDate."\n";
