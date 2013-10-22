@@ -8,6 +8,7 @@ echo "RSS information --\n";
 echo "Title: ".$test->getHeader()->title."\n";
 echo "Link: ".$test->getHeader()->link."\n";
 echo "Description: ".$test->getHeader()->description."\n";
+echo "TTL: ".$test->getHeader()->ttl."\n";
 echo "RSS content --\n";
 echo "Amount: ".$test->getContentCount()."\n";
 
@@ -72,7 +73,9 @@ class RSS_Crawler {
 		$header->title = $rss->channel->title;
 		$header->link = $rss->channel->link;
 		$header->description = $rss->channel->description;
+		// Optional
 		$header->pubDate = $rss->channel->pubDate;
+		$header->ttl = $rss->channel->ttl;
 
 		/* Save Content */
 		for($i = 0; $i < $count; $i++) {
