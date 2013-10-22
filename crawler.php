@@ -2,8 +2,9 @@
 
 echo "Initiating...\n";
 
+/* Connention test, should remove after publish */
 $test = new RSS_Crawler("http://chinese.engadget.com/rss.xml");
-echo $test->getItemCount();
+print_r($test->getContentCount());
 
 class RSS_Crawler {
 	/* cURL option */
@@ -12,7 +13,7 @@ class RSS_Crawler {
 
 	/* content */
 	private $header;
-	private $item;
+	private $content;
 	private $count;
 
 	public function __construct ($url) {
@@ -22,7 +23,7 @@ class RSS_Crawler {
 		} else {
 			$count = 0;
 			$header = new stdClass();
-			$item[] = new stdClass();
+			$content[] = new stdClass();
 			$this->capture($feedURL);
 		}
 	}
@@ -35,7 +36,7 @@ class RSS_Crawler {
 	*/
 	private function capture($URL) {
 		/* initialate */
-		global $count;
+		global $count, $header, $content;
 		$ch = curl_init();
 
 		$options = array(
@@ -61,17 +62,17 @@ class RSS_Crawler {
 
 		$count = count($rss->channel->item);
 
-		/* Source information 
+		/* Save Source information */
 		$header->title = $rss->channel->title;
 		$header->link = $rss->channel->link;
 		$header->description = $rss->channel->description;
 		$header->pubDate = $rss->channel->pubDate;
 
-		for($i = 0; $i < $cnt; $i++) {
-			$item[$i] = clone $rss->channel->item[$i];
+		/* Save Content */
+		for($i = 0; $i < $count; $i++) {
+			$content[$i] = clone $rss->channel->item[$i];
 			//echo($item[$i]->guid);
 		}
-		*/
 
 		/* Check local cache exist? */
 		$this->checkExist($rss);
@@ -124,9 +125,19 @@ class RSS_Crawler {
 		}
 	}
 
-	public function getItemCount() {
+	public function getContentCount() {
 		global $count;
 		return $count;
+	}
+
+	public function getHeader() {
+		global $header;
+		return $header;
+	}
+
+	public function getContent() {
+		global $content;
+		return $content;
 	}
 }
 ?>
