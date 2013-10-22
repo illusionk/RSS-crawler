@@ -4,11 +4,17 @@ echo "Initiating...\n";
 
 /* Connention test, should remove after publish */
 $test = new RSS_Crawler("http://udn.com/udnrss/BREAKINGNEWS1.xml");
+/* RSS FEED INFORMATION */
 echo "RSS information --\n";
 echo "Title: ".$test->getHeader()->title."\n";
 echo "Link: ".$test->getHeader()->link."\n";
 echo "Description: ".$test->getHeader()->description."\n";
-echo "TTL: ".$test->getHeader()->ttl."\n";
+// Optional
+if ($test->getHeader()->ttl != NULL)
+	echo "TTL: ".$test->getHeader()->ttl." min\n";
+if ($test->getHeader()->pubDate != NULL)
+	echo "Last updated: ".$test->getHeader()->pubDate."\n";
+/* RSS CONTENT INFORMATION */
 echo "RSS content --\n";
 echo "Amount: ".$test->getContentCount()."\n";
 
