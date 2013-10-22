@@ -3,7 +3,7 @@
 echo "Initiating...\n";
 
 /* Connention test, should remove after publish */
-$test = new RSS_Crawler("http://chinese.engadget.com/rss.xml");
+$test = new RSS_Crawler("http://udn.com/udnrss/BREAKINGNEWS1.xml");
 print_r($test->getContentCount());
 
 class RSS_Crawler {
@@ -29,10 +29,11 @@ class RSS_Crawler {
 	}
 
 	/**
-	 *	capture	
-	 *	Precondition: give an argument $URL
-	 *		$URL: URL of RSS feed.
-	 *	Postcondition: capture RSS feed content.
+	*	Capture RSS feed content.
+	*
+	*	@param String URL of RSS feed
+	*
+	*	Postcondition: check local cache is newest?
 	*/
 	private function capture($URL) {
 		/* initialate */
@@ -79,9 +80,11 @@ class RSS_Crawler {
 	}
 
 	/**
-	*	checkExist
-	*	Precondition: give an argument rss which is an object transform from RSS XML
-	*	Postcondition: check the file of RSS feed exist?
+	*	check the file of RSS feed exist?
+	*
+	*	@param object transform from RSS XML
+	*
+	*	Postcondition:
 	*		Not exist: Store current RSS content.
 	*		Exist: Compare local file and RSS content if pubDate are same?
 	*/
@@ -91,9 +94,11 @@ class RSS_Crawler {
 		$filename = md5($rss->channel->link).".json";
 		echo "Filename: ".$filename."\n";
 		if (file_exists($filename) == false) {
+			echo "File not exist, saving cache.\n";
 			$fp = fopen($filename, "w");
 			fwrite($fp, json_encode($rss->channel));
 			fclose($fp);
+			echo "Saved!\n";
 		} else {
 			$json = json_decode(file_get_contents($filename), false);
 			if ($this->isUpdated($json, $rss) == false) {
@@ -106,11 +111,12 @@ class RSS_Crawler {
 	}
 
 	/**
-	*	isUpdated
-	*	Precondition: Give two argument	$local, $rss.
-	*		$local: Object array of local cache file after json decode.
-	*		$rss:	Object array of newest RSS feed content.
-	*	Postcondition: Compare local and RSS feed newest pubDate
+	*	Compare local and RSS feed newest pubDate
+	*
+	*	@param ObjectArray local cache file after json decode.
+	*	@param ObjectArray newest RSS feed content.
+	*
+	*	Postcondition: 
 	*		Same: return true. local and RSS feed are consistent.
 	*		Different: return false. RSS feed has new content.
 	*/
@@ -125,16 +131,31 @@ class RSS_Crawler {
 		}
 	}
 
+	/**
+	*	Get amount of RSS content
+	*
+	*	Post:	Return an interger of amount of RSS content
+	*/
 	public function getContentCount() {
 		global $count;
 		return $count;
 	}
 
+	/**
+	*	Get RSS feed information
+	*
+	*	Post:	Return an object array of RSS feed information
+	*/
 	public function getHeader() {
 		global $header;
 		return $header;
 	}
 
+	/**
+	*	Get RSS content
+	*
+	*	Post:	Return an object array of RSS content
+	*/
 	public function getContent() {
 		global $content;
 		return $content;
