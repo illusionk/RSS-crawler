@@ -17,11 +17,11 @@ if ($test->getHeader()->pubDate != NULL)
 /* RSS CONTENT INFORMATION */
 echo "-- RSS content --\n";
 echo "Amount: ".$test->getContentCount()."\n";
-echo "New Articles:\n";
+echo "New Articles: ";
 if ($test->getUncachedContent() == NULL) {
 	echo "Nothing new.\n";
 } else {
-	print_r($test->getUncachedContent());
+	print_r($test->getUncachedContentCount());
 }
 
 class RSS_Crawler {
@@ -161,6 +161,31 @@ class RSS_Crawler {
 	}
 
 	/**
+	*	Check last update time to decide which content is not cached, and return.
+	*
+	*	Post:	Return an object array of RSS content which hasn't been cached. 
+	*			Return NULL if nothing new.
+	*/
+	private function uncachedContent($local, $rss) {
+		global $count;
+		$uncachedContent[] = new stdClass();
+
+		if($this->isUpdated($local, $rss) == true) {
+			echo "Nothing new.\n";
+			return NULL;
+		} else {
+			for ($i = 0; $i < $count; $i++) {
+				if ($local->item[$i]->pubDate != $rss->channel->item[$i]->pubDate) {
+					$uncachedContent[$i] = clone $rss->channel->item[$i];
+				} else {
+					break;
+				}
+			}
+			return $uncachedContent;
+		}
+	}
+
+	/**
 	*	Get amount of RSS content
 	*
 	*	Post:	Return an interger of amount of RSS content
@@ -195,28 +220,14 @@ class RSS_Crawler {
 	*
 	*	Post:	Return an object array of RSS content which hasn't been cached. return NULL if nothing new.
 	*/
-	private function uncachedContent($local, $rss) {
-		global $count;
-		$uncachedContent[] = new stdClass();
-
-		if($this->isUpdated($local, $rss) == true) {
-			echo "Nothing new.\n";
-			return NULL;
-		} else {
-			for ($i = 0; $i < $count; $i++) {
-				if ($local->item[$i]->pubDate != $rss->channel->item[$i]->pubDate) {
-					$uncachedContent[$i] = clone $rss->channel->item[$i];
-				} else {
-					break;
-				}
-			}
-			return $uncachedContent;
-		}
-	}
-
 	public function getUncachedContent() {
 		global $uncachedContent;
 		return $uncachedContent;
+	}
+
+	public function getUncachedContentCount() {
+		global $uncachedContent;
+		return count($uncachedContent);
 	}
 }
 ?>
