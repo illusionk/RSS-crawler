@@ -3,7 +3,7 @@
 echo "Initiating...\n";
 
 /* Connention test, should remove after publish */
-$test = new RSS_Crawler("http://chinese.engadget.com/rss.xml");
+$test = new RSS_Crawler("http://udn.com/udnrss/BREAKINGNEWS1.xml");
 /* RSS FEED INFORMATION */
 echo "-- RSS information --\n";
 echo "Title: ".$test->getHeader()->title."\n";
@@ -30,6 +30,7 @@ class RSS_Crawler {
 	private $userAgent = "RSS crawler";
 
 	/* content */
+	private $filename;
 	private $header;
 	private $content;
 	private $count;
@@ -41,6 +42,7 @@ class RSS_Crawler {
 		if ($feedURL == NULL) {
 			echo ">> Need an argument.\n Example: \$test = new RSS_Crawler(\"http://chinese.engadget.com/rss.xml\");";
 		} else {
+			$filename = "";
 			$count = 0;
 			$header = new stdClass();
 			$content[] = new stdClass();
@@ -58,7 +60,7 @@ class RSS_Crawler {
 	*/
 	private function capture($URL) {
 		/* initialate */
-		global $count, $header, $content;
+		global $count, $header, $content, $filename;
 		$ch = curl_init();
 
 		$options = array(
@@ -82,6 +84,10 @@ class RSS_Crawler {
 		/* Convert XML to object */
 		$rss = simplexml_load_string($result);
 
+		// Get filename
+		$filename = md5($rss->channel->link).".json";
+
+		// Get content count.
 		$count = count($rss->channel->item);
 
 		/* Save Source information */
@@ -99,11 +105,12 @@ class RSS_Crawler {
 		}
 
 		/* Check local cache exist? */
-		$this->checkExist($rss);
+		$this->savePage($rss);
+		$this->saveUncachedContent();
 	}
 
 	/**
-	*	check the file of RSS feed exist?
+	*	check the file of RSS feed exist and store page.
 	*
 	*	@param object transform from RSS XML
 	*
@@ -111,12 +118,12 @@ class RSS_Crawler {
 	*		Not exist: Store current RSS content.
 	*		Exist: Compare local file and RSS content if pubDate are same?
 	*/
-	private function checkExist($rss) {
-		global $uncachedContent;
+	private function savePage($rss) {
+		global $uncachedContent, $filename;
 
-		echo "\n>> Compare to exist file\n";
+		echo "\n>> Saving page...\n";
+		echo "Compare to exist file\n";
 		/* check site cache exist? */
-		$filename = md5($rss->channel->link).".json";
 		echo "Filename: ".$filename."\n";
 		if (file_exists($filename) == false) {
 			echo "File not exist, saving cache.\n";
@@ -136,6 +143,33 @@ class RSS_Crawler {
 				// Get uncached content.
 				$uncachedContent = $this->uncachedContent($json, $rss);
 			}
+		}
+	}
+
+	/**
+	*	Check content exist? Write uncache content to the begining of content file.
+	*
+	*	Postcondition:
+	*		Not exist: Save current uncached RSS content.
+	*		Exist: Write to the begining of the file.
+	*/
+	private function saveUncachedContent() {
+		global $uncachedContent, $filename;
+		echo "\n>> Saving uncache contents\n";
+		if (file_exists("_content_".$filename) == true) {
+			echo "Content file exist, saving.\n";
+			if ($uncachedContent == NULL) {
+				echo "Local file is already updated. No need to update, return!\n";
+				return;
+			}
+			$date = json_encode($uncachedContent);
+			$data .= file_get_contents("_content_".$filename);
+			file_put_contents("_content_".$filename, $data);
+			echo "Saved.\n";
+		} else {
+			echo "Content file not exist, saving.\n";
+			file_put_contents("_content_".$filename, json_encode($uncachedContent));
+			echo "Saved.\n";
 		}
 	}
 
@@ -169,7 +203,7 @@ class RSS_Crawler {
 	private function uncachedContent($local, $rss) {
 		global $count;
 		$uncachedContent[] = new stdClass();
-
+		echo ">> Find uncached content...\n";
 		if($this->isUpdated($local, $rss) == true) {
 			echo "Nothing new.\n";
 			return NULL;
@@ -181,6 +215,7 @@ class RSS_Crawler {
 					break;
 				}
 			}
+			echo "Done\n";
 			return $uncachedContent;
 		}
 	}
