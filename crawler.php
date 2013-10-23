@@ -4,6 +4,9 @@ echo "Initiating...\n";
 
 /* Connention test, should remove after publish */
 $test = new RSS_Crawler("http://udn.com/udnrss/BREAKINGNEWS1.xml");
+//http://udn.com/udnrss/BREAKINGNEWS1.xml
+//http://news.google.com.tw/news?pz=1&cf=all&ned=tw&hl=zh-TW&output=rss
+
 /* RSS FEED INFORMATION */
 echo "-- RSS information --\n";
 echo "Title: ".$test->getHeader()->title."\n";
@@ -159,17 +162,21 @@ class RSS_Crawler {
 		if (file_exists("_content_".$filename) == true) {
 			echo "Content file exist, saving.\n";
 			if ($uncachedContent == NULL) {
-				echo "Local file is already updated. No need to update, return!\n";
+				echo "Local file is already updated. No need to update, return!\n\n";
 				return;
 			}
-			$date = json_encode($uncachedContent);
-			$data .= file_get_contents("_content_".$filename);
-			file_put_contents("_content_".$filename, $data);
-			echo "Saved.\n";
+			$data0 = json_decode(json_encode($uncachedContent));
+			$data1 = json_decode(file_get_contents("_content_".$filename), false);
+			file_put_contents("_content_".$filename, array_merge($data0, $data1));
+			echo "Saved.\n\n";
 		} else {
 			echo "Content file not exist, saving.\n";
+			if ($uncachedContent == NULL) {
+				echo "Local file is already updated. No need to update, return!\n\n";
+				return;
+			}
 			file_put_contents("_content_".$filename, json_encode($uncachedContent));
-			echo "Saved.\n";
+			echo "Saved.\n\n";
 		}
 	}
 
