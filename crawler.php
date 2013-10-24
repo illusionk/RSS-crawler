@@ -6,6 +6,7 @@ echo "Initiating...\n";
 $test = new RSS_Crawler("http://udn.com/udnrss/BREAKINGNEWS1.xml");
 //http://udn.com/udnrss/BREAKINGNEWS1.xml
 //http://news.google.com.tw/news?pz=1&cf=all&ned=tw&hl=zh-TW&output=rss
+//http://chinese.engadget.com/rss.xml
 
 /* RSS FEED INFORMATION */
 echo "-- RSS information --\n";
@@ -167,7 +168,8 @@ class RSS_Crawler {
 			}
 			$data0 = json_decode(json_encode($uncachedContent));
 			$data1 = json_decode(file_get_contents("_content_".$filename), false);
-			file_put_contents("_content_".$filename, array_merge($data0, $data1));
+			$array = array_merge($data0, $data1);
+			file_put_contents("_content_".$filename, json_encode($array));
 			echo "Saved.\n\n";
 		} else {
 			echo "Content file not exist, saving.\n";
