@@ -3,7 +3,7 @@
 echo "Initiating...\n";
 
 /* Connention test, should remove after publish */
-$test = new RSS_Crawler("http://udn.com/udnrss/BREAKINGNEWS1.xml");
+$test = new RSS_Crawler("http://chinese.engadget.com/rss.xml");
 //http://udn.com/udnrss/BREAKINGNEWS1.xml
 //http://news.google.com.tw/news?pz=1&cf=all&ned=tw&hl=zh-TW&output=rss
 //http://chinese.engadget.com/rss.xml
@@ -27,6 +27,7 @@ if ($test->getUncachedContent() == NULL) {
 } else {
 	print_r($test->getUncachedContentCount());
 }
+/* Connection test end, should remove above after release */
 
 class RSS_Crawler {
 	/* cURL option */
@@ -105,7 +106,6 @@ class RSS_Crawler {
 		/* Save Content */
 		for($i = 0; $i < $count; $i++) {
 			$content[$i] = clone $rss->channel->item[$i];
-			//echo($item[$i]->guid);
 		}
 
 		/* Check local cache exist? */
@@ -134,7 +134,7 @@ class RSS_Crawler {
 			$fp = fopen($filename, "w");
 			fwrite($fp, json_encode($rss->channel));
 			fclose($fp);
-			echo "Saved!\n";
+			echo "Saved!\n\n";
 			$uncachedContent = $this->uncachedContent(NULL, $rss);
 		} else {
 			$json = json_decode(file_get_contents($filename), false);
@@ -142,7 +142,7 @@ class RSS_Crawler {
 				$fp = fopen($filename, "w");
 				fwrite($fp, json_encode($rss->channel));
 				fclose($fp);
-				echo "Local file has been updated!\n";
+				echo "Local file has up to-date!\n\n";
 
 				// Get uncached content.
 				$uncachedContent = $this->uncachedContent($json, $rss);
@@ -161,22 +161,24 @@ class RSS_Crawler {
 		global $uncachedContent, $filename;
 		echo "\n>> Saving uncache contents\n";
 		if (file_exists("_content_".$filename) == true) {
-			echo "Content file exist, saving.\n";
+			echo "Content file exists.\n";
 			if ($uncachedContent == NULL) {
-				echo "Local file is already updated. No need to update, return!\n\n";
+				echo "Local file is new.\n\n";
 				return;
 			}
+			echo "Saving...\n";
 			$data0 = json_decode(json_encode($uncachedContent));
 			$data1 = json_decode(file_get_contents("_content_".$filename), false);
 			$array = array_merge($data0, $data1);
 			file_put_contents("_content_".$filename, json_encode($array));
 			echo "Saved.\n\n";
 		} else {
-			echo "Content file not exist, saving.\n";
+			echo "Content file NOT exist.\n";
 			if ($uncachedContent == NULL) {
-				echo "Local file is already updated. No need to update, return!\n\n";
+				echo "Local file is new.\n\n";
 				return;
 			}
+			echo "Saving...\n";
 			file_put_contents("_content_".$filename, json_encode($uncachedContent));
 			echo "Saved.\n\n";
 		}
@@ -198,7 +200,7 @@ class RSS_Crawler {
 			echo "Local file is old\n";
 			return false;
 		} else {
-			echo "Local file is already updated!\n";
+			echo "Local file is new!\n";
 			return true;
 		}
 	}
@@ -214,7 +216,6 @@ class RSS_Crawler {
 		$uncachedContent[] = new stdClass();
 		echo ">> Find uncached content...\n";
 		if($this->isUpdated($local, $rss) == true) {
-			echo "Nothing new.\n";
 			return NULL;
 		} else {
 			for ($i = 0; $i < $count; $i++) {
@@ -224,7 +225,7 @@ class RSS_Crawler {
 					break;
 				}
 			}
-			echo "Done\n";
+			echo "Compare complete!\n";
 			return $uncachedContent;
 		}
 	}
