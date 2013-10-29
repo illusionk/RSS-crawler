@@ -1,14 +1,24 @@
 <?php
 
+require_once("db.php");
+
 echo "Initiating...\n";
 
 /* Connention test, should remove after publish */
 $test = new RSS_Crawler("http://chinese.engadget.com/rss.xml");
+$mysql = new c2mysql();
 //http://udn.com/udnrss/BREAKINGNEWS1.xml
 //http://news.google.com.tw/news?pz=1&cf=all&ned=tw&hl=zh-TW&output=rss
 //http://chinese.engadget.com/rss.xml
 
-/* RSS FEED INFORMATION */
+$content = $test->getUncachedContent();
+$count = $test->getUncachedContentCount();
+
+for($i=0 ; $i<$count; $i++) {
+	$mysql->insertContent($test->getMd5Name(), mysql_real_escape_string($content[$i]->title), $content[$i]->link, mysql_real_escape_string($content[$i]->description), $content[$i]->author, $content[$i]->category, $content[$i]->comments, $content[$i]->enclosure, $content[$i]->guid, $content[$i]->pubDate, $content[$i]->source);
+}
+
+/* RSS FEED INFORMATION
 echo "-- RSS information --\n";
 echo "Title: ".$test->getHeader()->title."\n";
 echo "Link: ".$test->getHeader()->link."\n";
@@ -18,7 +28,7 @@ if ($test->getHeader()->ttl != NULL)
 	echo "TTL: ".$test->getHeader()->ttl." min\n";
 if ($test->getHeader()->pubDate != NULL)
 	echo "Last updated: ".$test->getHeader()->pubDate."\n";
-/* RSS CONTENT INFORMATION */
+// RSS CONTENT INFORMATION
 echo "-- RSS content --\n";
 echo "Amount: ".$test->getContentCount()."\n";
 echo "New Articles: ";
@@ -35,7 +45,7 @@ class RSS_Crawler {
 	private $userAgent = "RSS crawler";
 
 	/* content */
-	private $filename;
+	private $filename, $md5name;
 	private $header;
 	private $content;
 	private $count;
@@ -90,6 +100,7 @@ class RSS_Crawler {
 		$rss = simplexml_load_string($result);
 
 		// Get filename
+		$GLOBALS['md5name'] = md5($rss->channel->link);
 		$filename = md5($rss->channel->link).".json";
 
 		// Get content count.
@@ -258,6 +269,10 @@ class RSS_Crawler {
 	public function getContent() {
 		global $content;
 		return $content;
+	}
+
+	public function getMd5Name() {
+		return $GLOBALS['md5name'];
 	}
 
 	/**
