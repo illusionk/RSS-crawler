@@ -1,11 +1,12 @@
 <?php
 
 require_once("db.php");
+require_once("converter.php");
 
 echo "Initiating...\n";
 
 /* Connention test, should remove after publish */
-$test = new RSS_Crawler("http://chinese.engadget.com/rss.xml");
+$test = new RSS_Crawler("http://news.google.com.tw/news?pz=1&cf=all&ned=tw&hl=zh-TW&output=rss");
 $mysql = new c2mysql();
 //http://udn.com/udnrss/BREAKINGNEWS1.xml
 //http://news.google.com.tw/news?pz=1&cf=all&ned=tw&hl=zh-TW&output=rss
@@ -15,7 +16,23 @@ $content = $test->getUncachedContent();
 $count = $test->getUncachedContentCount();
 
 for($i=0 ; $i<$count; $i++) {
-	$mysql->insertContent($test->getMd5Name(), mysql_real_escape_string($content[$i]->title), $content[$i]->link, mysql_real_escape_string($content[$i]->description), $content[$i]->author, $content[$i]->category, $content[$i]->comments, $content[$i]->enclosure, $content[$i]->guid, $content[$i]->pubDate, $content[$i]->source);
+
+	
+
+
+	$des = $content[$i]->description;
+	if (strlen($des) < 150) {
+		$doc = new Reader();
+		$doc->input($content[$i]->link);
+		$doc->init();
+		$convertResult = $doc->getOrigContent();
+		if ($doc->getStatus() && strlen($convertResult) > 150){
+			$des = $convertResult;
+		}
+		free($doc);
+	}
+
+	$mysql->insertContent($test->getMd5Name(), mysql_real_escape_string($content[$i]->title), $content[$i]->link, mysql_real_escape_string($des), $content[$i]->author, $content[$i]->category, $content[$i]->comments, $content[$i]->enclosure, $content[$i]->guid, $content[$i]->pubDate, $content[$i]->source);
 }
 
 /* RSS FEED INFORMATION
