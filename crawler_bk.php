@@ -1,17 +1,22 @@
 <?php
 
-header('Content-type: text/html; charset=utf-8'); 
-header('Vary: Accept-Language'); 
-
 require_once("db.php");
-require_once("converter.php");
+
+echo "Initiating...\n";
 
 /* Connention test, should remove after publish */
-$test = new RSS_Crawler("http://chinese.engadget.com/rss.xml");
-
+$test = new RSS_Crawler("http://news.google.com.tw/news?pz=1&cf=all&ned=tw&hl=zh-TW&output=rss");
+$mysql = new c2mysql();
 //http://udn.com/udnrss/BREAKINGNEWS1.xml
 //http://news.google.com.tw/news?pz=1&cf=all&ned=tw&hl=zh-TW&output=rss
 //http://chinese.engadget.com/rss.xml
+
+$content = $test->getUncachedContent();
+$count = $test->getUncachedContentCount();
+
+for($i=0 ; $i<$count; $i++) {
+	$mysql->insertContent($test->getMd5Name(), $content[$i]->title, $content[$i]->link, $content[$i]->description, $content[$i]->author, $content[$i]->category, $content[$i]->comments, $content[$i]->enclosure, $content[$i]->guid, $content[$i]->pubDate, $content[$i]->source);
+}
 
 /* RSS FEED INFORMATION
 echo "-- RSS information --\n";
@@ -40,25 +45,19 @@ class RSS_Crawler {
 	private $userAgent = "RSS crawler";
 
 	/* content */
-	private $tableName, $md5name;
+	private $filename, $md5name;
 	private $header;
 	private $content;
 	private $count;
 	private $uncachedContent;
-	private $mysql;
 
 	public function __construct ($url) {
-		global $count, $header, $content, $mysql;
-
-		echo "Initiating...\n";
-
+		global $count, $header, $content;
 		$feedURL = $url;
-
 		if ($feedURL == NULL) {
 			echo ">> Need an argument.\n Example: \$test = new RSS_Crawler(\"http://chinese.engadget.com/rss.xml\");";
 		} else {
-			$mysql = new c2mysql();
-			$tableName = "";
+			$filename = "";
 			$count = 0;
 			$header = new stdClass();
 			$content[] = new stdClass();
@@ -76,7 +75,7 @@ class RSS_Crawler {
 	*/
 	private function capture($URL) {
 		/* initialate */
-		global $count, $header, $content, $tableName;
+		global $count, $header, $content, $filename;
 		$ch = curl_init();
 
 		$options = array(
@@ -101,7 +100,7 @@ class RSS_Crawler {
 
 		// Get filename
 		$GLOBALS['md5name'] = md5($rss->channel->link);
-		$tableName = md5($rss->channel->link);
+		$filename = md5($rss->channel->link).".json";
 
 		// Get content count.
 		$count = count($rss->channel->item);
@@ -119,7 +118,9 @@ class RSS_Crawler {
 			$content[$i] = clone $rss->channel->item[$i];
 		}
 
+		/* Check local cache exist? */
 		$this->savePage($rss);
+		$this->saveUncachedContent();
 	}
 
 	/**
@@ -132,40 +133,30 @@ class RSS_Crawler {
 	*		Exist: Compare local file and RSS content if pubDate are same?
 	*/
 	private function savePage($rss) {
-		global $uncachedContent, $tableName, $content, $mysql;
+		global $uncachedContent, $filename;
 
 		echo "\n>> Saving page...\n";
 		echo "Compare to exist file\n";
 		/* check site cache exist? */
-		echo "Source: ".$tableName."\n";
-		if ($mysql->checkTableExist($tableName) == false) {
-			echo "Source not exist, create table.\n";
-			$mysql->createContentTable($tableName);
-			echo "Created!\n\n";
-
-			echo "INSERT data...\n";
-			for($i=count($content)-1; $i>=0; $i--) {
-				$doc = new Reader();
-				$doc->input($content[$i]->link);
-				$doc->init();
-				$strip_content = strip_tags($content[$i]->description);
-
-				$img_arr = array();
-				$img_arr = $doc->reImg();
-				if(count($img_arr) == 0)
-					$img = "";
-				else 
-					$img = $img_arr[0];
-
-				$mysql->insertContent($tableName, $content[$i]->title, $content[$i]->link, $content[$i]->description, $content[$i]->author, $content[$i]->category, $content[$i]->comments, $content[$i]->enclosure, $content[$i]->guid, $content[$i]->pubDate, $content[$i]->source, $strip_content, $img);
-			}
-			echo "INSERT COMPELETE!\n";
+		echo "Filename: ".$filename."\n";
+		if (file_exists($filename) == false) {
+			echo "File not exist, saving cache.\n";
+			$fp = fopen($filename, "w");
+			fwrite($fp, json_encode($rss->channel));
+			fclose($fp);
+			echo "Saved!\n\n";
+			$uncachedContent = $this->uncachedContent(NULL, $rss);
 		} else {
-			echo "TABLE exists, getting uncached content...\n";
-			$uncachedContent = $this->uncachedContent($rss);
+			$json = json_decode(file_get_contents($filename), false);
+			if ($this->isUpdated($json, $rss) == false) {
+				$fp = fopen($filename, "w");
+				fwrite($fp, json_encode($rss->channel));
+				fclose($fp);
+				echo "Local file has up to-date!\n\n";
 
-			if($uncachedContent != NULL)
-				$this->saveUncachedContent();
+				// Get uncached content.
+				$uncachedContent = $this->uncachedContent($json, $rss);
+			}
 		}
 	}
 
@@ -177,28 +168,30 @@ class RSS_Crawler {
 	*		Exist: Write to the begining of the file.
 	*/
 	private function saveUncachedContent() {
-		global $uncachedContent, $tableName, $mysql;
+		global $uncachedContent, $filename;
 		echo "\n>> Saving uncache contents\n";
-
-		echo "INSERT data...\n";
-		for($i=count($uncachedContent)-1; $i>=0; $i--) {
-			$doc = new Reader();
-			$doc->input($uncachedContent[$i]->link);
-			$doc->init();
-			$strip_content = strip_tags($uncachedContent[$i]->description);
-			//$doc->getContent()
-
-			$img_arr = array();
-			$img_arr = $doc->reImg();
-
-			if(count($img_arr) == 0)
-				$img = "";
-			else 
-				$img = $img_arr[0];
-
-			$mysql->insertContent($tableName, $uncachedContent[$i]->title, $uncachedContent[$i]->link, $uncachedContent[$i]->description, $uncachedContent[$i]->author, $uncachedContent[$i]->category, $uncachedContent[$i]->comments, $uncachedContent[$i]->enclosure, $uncachedContent[$i]->guid, $uncachedContent[$i]->pubDate, $uncachedContent[$i]->source, $strip_content, $img);
+		if (file_exists("_content_".$filename) == true) {
+			echo "Content file exists.\n";
+			if ($uncachedContent == NULL) {
+				echo "Local file is new.\n\n";
+				return;
+			}
+			echo "Saving...\n";
+			$data0 = json_decode(json_encode($uncachedContent));
+			$data1 = json_decode(file_get_contents("_content_".$filename), false);
+			$array = array_merge($data0, $data1);
+			file_put_contents("_content_".$filename, json_encode($array));
+			echo "Saved.\n\n";
+		} else {
+			echo "Content file NOT exist.\n";
+			if ($uncachedContent == NULL) {
+				echo "Local file is new.\n\n";
+				return;
+			}
+			echo "Saving...\n";
+			file_put_contents("_content_".$filename, json_encode($uncachedContent));
+			echo "Saved.\n\n";
 		}
-		echo "INSERT COMPELETE!\n";
 	}
 
 	/**
@@ -211,14 +204,13 @@ class RSS_Crawler {
 	*		Same: return true. local and RSS feed are consistent.
 	*		Different: return false. RSS feed has new content.
 	*/
-	private function isUpdated($rss) {
-		global $tableName, $mysql;
-
-		$oldMax = $mysql->getOldMaxLink($tableName);
-
-		if ($oldMax != $rss->channel->item[0]->link) {
+	private function isUpdated($local, $rss) {
+		echo "Local: ".$local->item[0]->pubDate." // Newest: ".$rss->channel->item[0]->pubDate."\n";
+		if ($local->item[0]->pubDate != $rss->channel->item[0]->pubDate) {
+			echo "Local file is old\n";
 			return false;
 		} else {
+			echo "Local file is new!\n";
 			return true;
 		}
 	}
@@ -229,25 +221,21 @@ class RSS_Crawler {
 	*	Post:	Return an object array of RSS content which hasn't been cached. 
 	*			Return NULL if nothing new.
 	*/
-	private function uncachedContent($rss) {
-		global $count, $mysql, $tableName;
+	private function uncachedContent($local, $rss) {
+		global $count;
 		$uncachedContent[] = new stdClass();
 		echo ">> Find uncached content...\n";
-		echo "Checking version...\n";
-		if($this->isUpdated($rss) == true) {
-			echo "[EXIT] All cached, cya!\n";
+		if($this->isUpdated($local, $rss) == true) {
 			return NULL;
 		} else {
-			echo "Seems new articles is published, Let's catch'em!\n";
-			$oldMax = $mysql->getOldMaxLink($tableName);
 			for ($i = 0; $i < $count; $i++) {
-				if ($oldMax != $rss->channel->item[$i]->link) {
+				if ($local->item[$i]->pubDate != $rss->channel->item[$i]->pubDate) {
 					$uncachedContent[$i] = clone $rss->channel->item[$i];
 				} else {
 					break;
 				}
 			}
-			echo "New article has been picked!\n";
+			echo "Compare complete!\n";
 			return $uncachedContent;
 		}
 	}

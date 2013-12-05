@@ -1,7 +1,8 @@
 <?php 
 
 	/* based on Readability.php of Arc90 */
-
+	header('Content-type: text/html; charset=utf-8'); 
+	header('Vary: Accept-Language'); 
 	require_once('JSLikeHTMLElement.php');
 
 	class Reader{
@@ -12,7 +13,7 @@
 		public $dom;
 		public $url = null; 
 		protected $body = null; 
-		private $success = false;
+		private $success;
 		public $img = array();
 		public $embedd = array();
 		public $tempContent;
@@ -76,11 +77,6 @@
 			if (trim($html) == '') $html = '<html></html>';
 			@$this->dom->loadHTML($html);
 			$this->url = $url;
-		}
-
-		public function getStatus() {
-			global $success;
-			return $success;
 		}
 
 		public function getContent() {
@@ -685,24 +681,9 @@
 		}
 
 	}
-	
-	/*
-	$doc = new Reader();
-	$doc->input("http://news.google.com/news/url?sa=t&fd=R&usg=AFQjCNEA1fDxFVFKCPfD-FDWT2RmrEaPRg&url=http://www.nownews.com/n/2013/12/03/1039927");
-	$doc->init();
-	$content = $doc->getOrigContent();
-	//echo $content;
-	//$arr = $doc->reEmbed();
-
-	//print_r($arr);
-	//print_r($score);
-	$arr = array();
-	$arr = $doc->reImg();
-	echo "<div>";
-	print_r($arr);
-	echo "<div/>";
-	*/
-	
-	
-
 ?>
+
+
+
+
+
