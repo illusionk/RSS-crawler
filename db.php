@@ -10,25 +10,17 @@ class c2mysql {
 	public function __construct() {
 		global $link, $dbhost, $dbuser, $dbpass, $dbname;
 		// Init
-		$dbhost = "127.0.0.1";
-		$dbport = "3307";
-		$dbuser = "username";
-		$dbpass = "password";
-		$dbname = "rss";
+		$dbhost = "host";
+		$dbuser = "user";
+		$dbpass = "pass";
+		$dbname = "database";
 
-		$link = mysqli_connect($dbhost, $dbuser, $dbpass,$dbname,$dbport);
+		$link = mysqli_connect($dbhost, $dbuser, $dbpass, $dbname);
 		if (!$link) {
-		    die('Could not connect: ' . mysql_error($link));
+		    die('Could not connect: ' . mysqli_error($link));
 		}
 		mysqli_set_charset($link, "utf8");
 		echo "Connected successfully\n";
-		//$this->insertContent("YO", "title one", "this is link", "this is desp", "ME", "nop", NULL, NULL, NULL, NULL, NULL);
-	}
-
-	public function __destruct() {
-		global $link;
-		mysqli_close($link);
-		echo "Destoryed\n";
 	}
 
 	public function getOldMaxLink($table) {
@@ -42,7 +34,8 @@ class c2mysql {
 
 	public function checkTableExist($table) {
 		global $link;
-		if(mysqli_num_rows(mysqli_query($link, "SHOW TABLES LIKE '".$table."'"))==1)
+		$result = mysqli_query($link, "SHOW TABLES LIKE '".$table."'") or die ('[ERROR]Query: ' . mysqli_error($link));
+		if(mysqli_num_rows($result) == 1)
 		    return true;
 		else
 			return false;
@@ -67,7 +60,7 @@ class c2mysql {
 			echo "Table not exists, creating...\n";
 			$this->createContentTable($table);
 		}
-		
+
 		preg_match("/.*, [0]*([0-9]{1,}) (.*) (.*) [0]*([0-9]{1,}):[0]*([0-9]{1,}):[0]*([0-9]{1,}) .*/", $pubDate, $time);
 
 		switch($time[2]) {

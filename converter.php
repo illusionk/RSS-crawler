@@ -3,6 +3,7 @@
 	/* based on Readability.php of Arc90 */
 	header('Content-type: text/html; charset=utf-8'); 
 	header('Vary: Accept-Language'); 
+	
 	require_once('JSLikeHTMLElement.php');
 
 	class Reader{
@@ -682,8 +683,3 @@
 
 	}
 ?>
-
-
-
-
-

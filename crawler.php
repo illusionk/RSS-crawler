@@ -7,7 +7,7 @@ require_once("db.php");
 require_once("converter.php");
 
 /* Connention test, should remove after publish */
-$test = new RSS_Crawler("http://chinese.engadget.com/rss.xml");
+//$test = new RSS_Crawler("http://news.google.com.tw/news?pz=1&cf=all&ned=tw&hl=zh-TW&output=rss");
 
 //http://udn.com/udnrss/BREAKINGNEWS1.xml
 //http://news.google.com.tw/news?pz=1&cf=all&ned=tw&hl=zh-TW&output=rss
@@ -49,8 +49,9 @@ class RSS_Crawler {
 
 	public function __construct ($url) {
 		global $count, $header, $content, $mysql;
-
-		echo "Initiating...\n";
+		echo "\n-----------------------------------\n";
+		echo "				Initiating...\n";
+		echo "-----------------------------------\n";
 
 		$feedURL = $url;
 
@@ -65,6 +66,12 @@ class RSS_Crawler {
 			$uncachedContent[] = new stdClass();
 			$this->capture($feedURL);
 		}
+	}
+
+	public function __destruct() {
+		global $link;
+		mysqli_close($link);
+		echo "Destoryed\n";
 	}
 
 	/**
@@ -159,7 +166,7 @@ class RSS_Crawler {
 
 				$mysql->insertContent($tableName, $content[$i]->title, $content[$i]->link, $content[$i]->description, $content[$i]->author, $content[$i]->category, $content[$i]->comments, $content[$i]->enclosure, $content[$i]->guid, $content[$i]->pubDate, $content[$i]->source, $strip_content, $img);
 			}
-			echo "INSERT COMPELETE!\n";
+			echo "[EXIT]INSERT COMPELETE!\n\n";
 		} else {
 			echo "TABLE exists, getting uncached content...\n";
 			$uncachedContent = $this->uncachedContent($rss);
@@ -216,6 +223,8 @@ class RSS_Crawler {
 
 		$oldMax = $mysql->getOldMaxLink($tableName);
 
+		echo "\n\n Table: ".$tableName.", ".$rss->channel->item[0]->link;
+
 		if ($oldMax != $rss->channel->item[0]->link) {
 			return false;
 		} else {
@@ -235,7 +244,7 @@ class RSS_Crawler {
 		echo ">> Find uncached content...\n";
 		echo "Checking version...\n";
 		if($this->isUpdated($rss) == true) {
-			echo "[EXIT] All cached, cya!\n";
+			echo "[EXIT] All cached, cya!\n\n";
 			return NULL;
 		} else {
 			echo "Seems new articles is published, Let's catch'em!\n";
@@ -244,11 +253,10 @@ class RSS_Crawler {
 				if ($oldMax != $rss->channel->item[$i]->link) {
 					$uncachedContent[$i] = clone $rss->channel->item[$i];
 				} else {
-					break;
+					echo "New article has been picked!\n";
+					return $uncachedContent;
 				}
 			}
-			echo "New article has been picked!\n";
-			return $uncachedContent;
 		}
 	}
 
@@ -270,6 +278,11 @@ class RSS_Crawler {
 	public function getHeader() {
 		global $header;
 		return $header;
+	}
+
+	public function getSourceTitle() {
+		global $header;
+		return $header->title;
 	}
 
 	/**
