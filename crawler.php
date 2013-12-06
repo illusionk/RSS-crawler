@@ -50,7 +50,7 @@ class RSS_Crawler {
 	public function __construct ($url) {
 		global $count, $header, $content, $mysql;
 		echo "\n-----------------------------------\n";
-		echo "				Initiating...\n";
+		echo "	Initiating...\n";
 		echo "-----------------------------------\n";
 
 		$feedURL = $url;
@@ -141,7 +141,7 @@ class RSS_Crawler {
 	private function savePage($rss) {
 		global $uncachedContent, $tableName, $content, $mysql;
 
-		echo "\n>> Saving page...\n";
+		echo "\n\n>> Saving page...\n";
 		echo "Compare to exist file\n";
 		/* check site cache exist? */
 		echo "Source: ".$tableName."\n";
@@ -166,10 +166,10 @@ class RSS_Crawler {
 
 				$mysql->insertContent($tableName, $content[$i]->title, $content[$i]->link, $content[$i]->description, $content[$i]->author, $content[$i]->category, $content[$i]->comments, $content[$i]->enclosure, $content[$i]->guid, $content[$i]->pubDate, $content[$i]->source, $strip_content, $img);
 			}
-			echo "[EXIT]INSERT COMPELETE!\n\n";
+			echo "\n\n[EXIT]INSERT COMPELETE!\n\n";
 		} else {
 			echo "TABLE exists, getting uncached content...\n";
-			$uncachedContent = $this->uncachedContent($rss);
+			$uncachedContent = $this->returnUncachedContent($rss);
 
 			if($uncachedContent != NULL)
 				$this->saveUncachedContent();
@@ -185,7 +185,7 @@ class RSS_Crawler {
 	*/
 	private function saveUncachedContent() {
 		global $uncachedContent, $tableName, $mysql;
-		echo "\n>> Saving uncache contents\n";
+		echo "\n\n>> Saving uncache contents\n";
 
 		echo "INSERT data...\n";
 		for($i=count($uncachedContent)-1; $i>=0; $i--) {
@@ -205,7 +205,7 @@ class RSS_Crawler {
 
 			$mysql->insertContent($tableName, $uncachedContent[$i]->title, $uncachedContent[$i]->link, $uncachedContent[$i]->description, $uncachedContent[$i]->author, $uncachedContent[$i]->category, $uncachedContent[$i]->comments, $uncachedContent[$i]->enclosure, $uncachedContent[$i]->guid, $uncachedContent[$i]->pubDate, $uncachedContent[$i]->source, $strip_content, $img);
 		}
-		echo "INSERT COMPELETE!\n";
+		echo "\n\n[EXIT] INSERT COMPELETE!\n";
 	}
 
 	/**
@@ -223,7 +223,7 @@ class RSS_Crawler {
 
 		$oldMax = $mysql->getOldMaxLink($tableName);
 
-		echo "\n\n Table: ".$tableName.", ".$rss->channel->item[0]->link;
+		//echo "\n\n Table: ".$tableName.", ".$rss->channel->item[0]->link;
 
 		if ($oldMax != $rss->channel->item[0]->link) {
 			return false;
@@ -238,25 +238,27 @@ class RSS_Crawler {
 	*	Post:	Return an object array of RSS content which hasn't been cached. 
 	*			Return NULL if nothing new.
 	*/
-	private function uncachedContent($rss) {
+	private function returnUncachedContent($rss) {
 		global $count, $mysql, $tableName;
 		$uncachedContent[] = new stdClass();
 		echo ">> Find uncached content...\n";
 		echo "Checking version...\n";
 		if($this->isUpdated($rss) == true) {
-			echo "[EXIT] All cached, cya!\n\n";
+			echo "\n[EXIT] All cached, cya!\n\n";
 			return NULL;
 		} else {
 			echo "Seems new articles is published, Let's catch'em!\n";
 			$oldMax = $mysql->getOldMaxLink($tableName);
+
 			for ($i = 0; $i < $count; $i++) {
 				if ($oldMax != $rss->channel->item[$i]->link) {
 					$uncachedContent[$i] = clone $rss->channel->item[$i];
 				} else {
-					echo "New article has been picked!\n";
-					return $uncachedContent;
+					break;
 				}
 			}
+			echo "New article has been picked!\n";
+			return $uncachedContent;
 		}
 	}
 

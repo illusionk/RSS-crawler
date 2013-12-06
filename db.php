@@ -61,6 +61,13 @@ class c2mysql {
 			$this->createContentTable($table);
 		}
 
+		$sql = "SELECT `id` FROM `".$table."` WHERE `id` LIKE '".md5($clink)."' LIMIT 1;";
+		$result = mysqli_query($link, $sql) or die('Insert: ' . mysqli_error($link));
+		if(mysqli_num_rows($result) != 0) {
+			echo "Article Exist!\n";
+			return;
+		}
+
 		preg_match("/.*, [0]*([0-9]{1,}) (.*) (.*) [0]*([0-9]{1,}):[0]*([0-9]{1,}):[0]*([0-9]{1,}) .*/", $pubDate, $time);
 
 		switch($time[2]) {
@@ -105,7 +112,7 @@ class c2mysql {
 		// INSERT
 		$sql = "INSERT INTO `".$table."` (`id`, `title`, `link`, `description`, `author`, `category`, `comments`, `enclosure`, `guid`, `pubDate`, `day`, `month`, `year`, `hour`, `minute`, `source`, `summary`, `img`, `dread`, `dsave`) VALUES ('".md5($clink)."', '".mysqli_real_escape_string($link, $title)."', '".$clink."', '".mysqli_real_escape_string($link, $description)."', '".$author."', '".$category."', '".$comments."', '".$enclosure."', '".$guid."', '".$time[0]."', '".$time[1]."', '".$time[2]."', '".$time[3]."', '".$time[4]."', '".$time[5]."', '".$source."', '".mysqli_real_escape_string($link, $summary)."', '".$img."','0', '0');";
 		$result = mysqli_query($link, $sql) or die('Insert: ' . mysqli_error($link));
-		echo "RSS INSERT complete!\n";
+		echo "INSERT complete!\n";
 	}
 }
 ?>
