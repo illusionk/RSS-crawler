@@ -60,8 +60,21 @@ class RSS_Crawler {
 	}
 
 	public function __destruct() {
-		global $link;
+		global $link, $content, $tableName, $uncachedContent, $type, $mysql;
 		mysqli_close($link);
+		unset($link);
+		foreach ($this as $key => $content) {
+            unset($this->$key);
+        }
+		unset($content);
+		unset($tableName);
+		foreach ($this as $key => $uncachedContent) {
+            unset($this->$key);
+        }
+		unset($content);
+		unset($uncachedContent);
+		unset($type);
+		unset($mysql);
 		echo "Destoryed\n";
 	}
 
@@ -96,14 +109,15 @@ class RSS_Crawler {
 
 		/* Convert XML to object */
 		$parsed = simplexml_load_string($result);
-		//print_r($parsed);
 
 		// ATOM or RSS
 		if(count($parsed->channel) == 0) {
 			$channel = $parsed;
+			$channelTitle = $parsed->title;
 			$type = "ATOM";
 		}else {
 			$channel = $parsed->channel;
+			$channelTitle = $parsed->channel->title;
 			$type = "RSS";
 		}
 
@@ -128,7 +142,6 @@ class RSS_Crawler {
 		} else if ($type == "RSS") {
 			$count = count($channel->item);
 		}
-		
 
 		/* Save Source information 
 		$header->title = $channel->title;
@@ -160,7 +173,9 @@ class RSS_Crawler {
 			}
 		}
 
-		$this->savePage($channel);
+		$this->savePage($channel, $channelTitle);
+
+		unset($parsed);
 	}
 
 	private function html2txt($document){ 
@@ -182,7 +197,7 @@ class RSS_Crawler {
 	*		Not exist: Store current RSS content.
 	*		Exist: Compare local file and RSS content if pubDate are same?
 	*/
-	private function savePage($channel) {
+	private function savePage($channel, $channelTitle) {
 		global $uncachedContent, $tableName, $content, $mysql, $type;
 
 		echo "\n\n>> Saving page...\n";
@@ -194,13 +209,23 @@ class RSS_Crawler {
 			$mysql->createContentTable($tableName);
 			echo "Created!\n\n";
 
+			echo "Create Sidebar Item.\n";
+			$mysql->createSidebarItem($tableName, $channelTitle);
+			echo "Created!\n\n";
+
 			echo "INSERT data...\n";
+
+			//print_r($content);
 			if ($type == "RSS") {
 				for($i=count($content)-1; $i>=0; $i--) {
+					if($content[$i]->link == NULL) {
+						echo "Content error, skip\n";
+						continue;
+					}
 					$doc = new Reader();
 					$doc->input($content[$i]->link);
 					$doc->init();
-					$strip_content = $strip_content = $this->html2txt($content[$i]->content);
+					$strip_content = $strip_content = $this->html2txt($content[$i]->description);
 
 					$img_arr = array();
 					$img_arr = $doc->reImg();
@@ -213,6 +238,10 @@ class RSS_Crawler {
 				}
 			} else if ($type == "ATOM") {
 				for($i=count($content)-1; $i>=0; $i--) {
+					if($content[$i]->link == NULL) {
+						echo "Content error, skip\n";
+						continue;
+					}
 
 					// Get Article Link.
 					$articleLink = "";
@@ -267,10 +296,14 @@ class RSS_Crawler {
 		echo "INSERT data...\n";
 		if($type == "RSS") {
 			for($i=count($uncachedContent)-1; $i>=0; $i--) {
+				if($uncachedContent[$i]->link == NULL) {
+					echo "Content error, skip\n";
+					continue;
+				}
 				$doc = new Reader();
 				$doc->input($uncachedContent[$i]->link);
 				$doc->init();
-				$strip_content = $this->html2txt($uncachedContent[$i]->content);
+				$strip_content = $this->html2txt($uncachedContent[$i]->description);
 				//$doc->getContent()
 
 				$img_arr = array();
@@ -285,6 +318,11 @@ class RSS_Crawler {
 			}
 		} else if ($type == "ATOM") {
 			for($i = count($uncachedContent)-1; $i >= 0; $i--) {
+
+				if($uncachedContent[$i]->link == NULL) {
+					echo "Content error, skip\n";
+					continue;
+				}
 
 				// Get Article Link.
 				$articleLink = "";

@@ -1,7 +1,6 @@
 <?php 
 
 require("crawler.php");
-
 $macrumor = new RSS_Crawler("http://feeds.macrumors.com/MacRumors-All?format=xml");
 unset($macrumor);
 sleep(2);
@@ -22,5 +21,8 @@ unset($UDN);
 sleep(2);
 $engadget = new RSS_Crawler("http://chinese.engadget.com/rss.xml");
 unset($engadget);
+sleep(2);
+$horny = new RSS_Crawler("http://feeds.feedburner.com/blogspot/VQFAg?format=xml");
+unset($horny);
 
 ?>

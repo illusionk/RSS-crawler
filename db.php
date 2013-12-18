@@ -1,19 +1,14 @@
 <?php
-
-//  Connect
-//$test = new c2mysql();
-//$test->getOldMaxLink("75e1d25824145c6ff33aa8f3505f3eba");
-
 class c2mysql {
 	private $link;
 
 	public function __construct() {
-		global $link, $dbhost, $dbuser, $dbpass, $dbname;
+		global $link;
 		// Init
 		$dbhost = "127.0.0.1";
-		$dbuser = "root";
-		$dbpass = "";
-		$dbname = "";
+		$dbuser = "user";
+		$dbpass = "pass";
+		$dbname = "database";
 		$dbport = "3306";
 
 		$link = mysqli_connect($dbhost, $dbuser, $dbpass, $dbname, $dbport);
@@ -44,7 +39,7 @@ class c2mysql {
 
 	public function createContentTable($table) {
 		global $link;
-		if ($this->checkTableExist($table) == ture) {
+		if ($this->checkTableExist($table) == true) {
 			echo "Table already exists\n";
 			return;
 		}
@@ -52,6 +47,13 @@ class c2mysql {
 
 		$result = mysqli_query($link, $sql) or die("Couldn't create TABLE ".mysqli_error($link)."\n");
 		echo "TABLE ".$table." created!\n";
+	}
+
+	public function createSidebarItem($table, $title) {
+		global $link;
+		$sql = "INSERT INTO `reader_user`.`sidebar` (`doc`, `name`, `url`, `sourceId`) VALUES (NULL, '".$title."', '', '".$table."');";
+		$result = mysqli_query($link, $sql) or die("Couldn't create SideBar item ".mysqli_error($link)."\n");
+		echo "Sidebar ".$table." (".$title.") created!\n";
 	}
 
 	public function insertContent($type, $table, $title, $clink, $description, $author, $category, $comments, $enclosure, $guid, $pubDate, $source, $summary, $img) {
