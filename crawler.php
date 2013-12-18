@@ -3,11 +3,11 @@
 header('Content-type: text/html; charset=utf-8'); 
 header('Vary: Accept-Language'); 
 
-require_once("db.php");
-require_once("converter.php");
+require("db.php");
+require("converter.php");
 
 /* Connention test, should remove after publish */
-//$test = new RSS_Crawler("http://news.google.com.tw/news?pz=1&cf=all&ned=tw&hl=zh-TW&output=rss");
+//$test = new RSS_Crawler("http://feeds.feedburner.com/blogspot/VQFAg?format=xml");
 
 //http://udn.com/udnrss/BREAKINGNEWS1.xml
 //http://news.google.com.tw/news?pz=1&cf=all&ned=tw&hl=zh-TW&output=rss
@@ -23,15 +23,6 @@ if ($test->getHeader()->ttl != NULL)
 	echo "TTL: ".$test->getHeader()->ttl." min\n";
 if ($test->getHeader()->pubDate != NULL)
 	echo "Last updated: ".$test->getHeader()->pubDate."\n";
-// RSS CONTENT INFORMATION
-echo "-- RSS content --\n";
-echo "Amount: ".$test->getContentCount()."\n";
-echo "New Articles: ";
-if ($test->getUncachedContent() == NULL) {
-	echo "Nothing new.\n";
-} else {
-	print_r($test->getUncachedContentCount());
-}
 /* Connection test end, should remove above after release */
 
 class RSS_Crawler {
@@ -43,12 +34,12 @@ class RSS_Crawler {
 	private $tableName, $md5name;
 	private $header;
 	private $content;
-	private $count;
 	private $uncachedContent;
 	private $mysql;
+	private $type;
 
 	public function __construct ($url) {
-		global $count, $header, $content, $mysql;
+		global $header, $content, $mysql, $type;
 		echo "\n-----------------------------------\n";
 		echo "	Initiating...\n";
 		echo "-----------------------------------\n";
@@ -60,7 +51,7 @@ class RSS_Crawler {
 		} else {
 			$mysql = new c2mysql();
 			$tableName = "";
-			$count = 0;
+			$type = "";
 			$header = new stdClass();
 			$content[] = new stdClass();
 			$uncachedContent[] = new stdClass();
@@ -83,15 +74,15 @@ class RSS_Crawler {
 	*/
 	private function capture($URL) {
 		/* initialate */
-		global $count, $header, $content, $tableName;
+		global $header, $content, $tableName, $type;
 		$ch = curl_init();
 
 		$options = array(
 			CURLOPT_URL=>$URL,
 			CURLOPT_HEADER=>0,
 			CURLOPT_VERBOSE=>0,
-			CURLOPT_RETURNTRANSFER=>true,
-			);
+			CURLOPT_RETURNTRANSFER=>true
+		);
 		curl_setopt_array($ch, $options);
 
 		echo ">> Captureing...\n"."target: ".$URL."\n";
@@ -104,30 +95,83 @@ class RSS_Crawler {
 		echo ">> Captured!\n";
 
 		/* Convert XML to object */
-		$rss = simplexml_load_string($result);
+		$parsed = simplexml_load_string($result);
+		//print_r($parsed);
 
-		// Get filename
-		$GLOBALS['md5name'] = md5($rss->channel->link);
-		$tableName = md5($rss->channel->link);
-
-		// Get content count.
-		$count = count($rss->channel->item);
-
-		/* Save Source information */
-		$header->title = $rss->channel->title;
-		$header->link = $rss->channel->link;
-		$header->description = $rss->channel->description;
-		// Optional
-		$header->pubDate = $rss->channel->pubDate;
-		$header->ttl = $rss->channel->ttl;
-
-		/* Save Content */
-		for($i = 0; $i < $count; $i++) {
-			$content[$i] = clone $rss->channel->item[$i];
+		// ATOM or RSS
+		if(count($parsed->channel) == 0) {
+			$channel = $parsed;
+			$type = "ATOM";
+		}else {
+			$channel = $parsed->channel;
+			$type = "RSS";
 		}
 
-		$this->savePage($rss);
+
+		// Get filename
+		if($type == "ATOM") {
+			if(count($channel->link) > 1) {
+				$GLOBALS['md5name'] = md5($channel->link[0]->attributes()->href);
+				$tableName = md5($channel->link[0]->attributes()->href);
+			}else {
+				$GLOBALS['md5name'] = md5($channel->link->attributes()->href);
+				$tableName = md5($channel->link->attributes()->href);
+			}
+		}else if($type == "RSS") {
+			$GLOBALS['md5name'] = md5($channel->link);
+			$tableName = md5($channel->link);
+		}
+		
+		// Get content count.
+		if($type == "ATOM") {
+			$count = count($channel->entry);
+		} else if ($type == "RSS") {
+			$count = count($channel->item);
+		}
+		
+
+		/* Save Source information 
+		$header->title = $channel->title;
+		$header->link = $channel->link;
+		$header->description = $channel->description;
+		// Optional
+		$header->pubDate = $channel->pubDate;
+		$header->ttl = $channel->ttl;
+		*/
+
+		/* Save Content */
+		if($type == "ATOM") {
+			for($i = 0, $j = 0; $i < $count; $i++) {
+				if($channel->entry[$i]->title == "") {
+					echo "No title, skip!\n";
+					continue;
+				}
+				$content[$j] = clone $channel->entry[$i];
+				$j++;
+			}
+		} else if ($type == "RSS") {
+			for($i = 0, $j = 0; $i < $count; $i++) {
+				if($channel->item[$i]->title == "") {
+					echo "No title, skip!\n";
+					continue;
+				}
+				$content[$j] = clone $channel->item[$i];
+				$j++;
+			}
+		}
+
+		$this->savePage($channel);
 	}
+
+	private function html2txt($document){ 
+		$search = array('@<script[^>]*?>.*?</script>@si',  // Strip out javascript 
+		               '@<[\/\!]*?[^<>]*?>@si',            // Strip out HTML tags 
+		               '@<style[^>]*?>.*?</style>@siU',    // Strip style tags properly 
+		               '@<![\s\S]*?--[ \t\n\r]*>@'         // Strip multi-line comments including CDATA
+		); 
+		$text = preg_replace($search, '', $document); 
+		return $text; 
+	} 
 
 	/**
 	*	check the file of RSS feed exist and store page.
@@ -138,8 +182,8 @@ class RSS_Crawler {
 	*		Not exist: Store current RSS content.
 	*		Exist: Compare local file and RSS content if pubDate are same?
 	*/
-	private function savePage($rss) {
-		global $uncachedContent, $tableName, $content, $mysql;
+	private function savePage($channel) {
+		global $uncachedContent, $tableName, $content, $mysql, $type;
 
 		echo "\n\n>> Saving page...\n";
 		echo "Compare to exist file\n";
@@ -151,25 +195,58 @@ class RSS_Crawler {
 			echo "Created!\n\n";
 
 			echo "INSERT data...\n";
-			for($i=count($content)-1; $i>=0; $i--) {
-				$doc = new Reader();
-				$doc->input($content[$i]->link);
-				$doc->init();
-				$strip_content = strip_tags($content[$i]->description);
+			if ($type == "RSS") {
+				for($i=count($content)-1; $i>=0; $i--) {
+					$doc = new Reader();
+					$doc->input($content[$i]->link);
+					$doc->init();
+					$strip_content = $strip_content = $this->html2txt($content[$i]->content);
 
-				$img_arr = array();
-				$img_arr = $doc->reImg();
-				if(count($img_arr) == 0)
-					$img = "";
-				else 
-					$img = $img_arr[0];
+					$img_arr = array();
+					$img_arr = $doc->reImg();
+					if(count($img_arr) == 0)
+						$img = "";
+					else 
+						$img = $img_arr[0];
 
-				$mysql->insertContent($tableName, $content[$i]->title, $content[$i]->link, $content[$i]->description, $content[$i]->author, $content[$i]->category, $content[$i]->comments, $content[$i]->enclosure, $content[$i]->guid, $content[$i]->pubDate, $content[$i]->source, $strip_content, $img);
+					$mysql->insertContent($type, $tableName, $content[$i]->title, $content[$i]->link, $content[$i]->description, $content[$i]->author, $content[$i]->category, $content[$i]->comments, $content[$i]->enclosure, $content[$i]->guid, $content[$i]->pubDate, $content[$i]->source, mb_substr($strip_content,0,250,"utf8"), $img);
+				}
+			} else if ($type == "ATOM") {
+				for($i=count($content)-1; $i>=0; $i--) {
+
+					// Get Article Link.
+					$articleLink = "";
+					if(count($content[$i]->link) > 1) {
+						for($j = 0; $j < count($content[$i]->link); $j++){
+							if ($content[$i]->link[$j]->attributes()->rel == "self") {
+								$articleLink = $content[$i]->link[$j]->attributes()->href;
+								break;
+							}
+						}
+					} else {
+						$articleLink = $content[$i]->link->attributes()->href;
+					}
+
+					$doc = new Reader();
+					$doc->input($articleLink);
+					$doc->init();
+					$strip_content = $this->html2txt($content[$i]->content);
+
+					$img_arr = array();
+					$img_arr = $doc->reImg();
+					if(count($img_arr) == 0)
+						$img = "";
+					else 
+						$img = $img_arr[0];
+
+					$mysql->insertContent($type, $tableName, $content[$i]->title, $articleLink, $content[$i]->content, $content[$i]->author->name, $content[$i]->category->attributes()->term, "", "", $content[$i]->id, $content[$i]->published, "", mb_substr($strip_content,0,250,"utf8"), $img);
+				}
 			}
+			
 			echo "\n\n[EXIT]INSERT COMPELETE!\n\n";
 		} else {
 			echo "TABLE exists, getting uncached content...\n";
-			$uncachedContent = $this->returnUncachedContent($rss);
+			$uncachedContent = $this->returnUncachedContent($channel);
 
 			if($uncachedContent != NULL)
 				$this->saveUncachedContent();
@@ -184,27 +261,61 @@ class RSS_Crawler {
 	*		Exist: Write to the begining of the file.
 	*/
 	private function saveUncachedContent() {
-		global $uncachedContent, $tableName, $mysql;
+		global $uncachedContent, $tableName, $mysql, $type;
 		echo "\n\n>> Saving uncache contents\n";
 
 		echo "INSERT data...\n";
-		for($i=count($uncachedContent)-1; $i>=0; $i--) {
-			$doc = new Reader();
-			$doc->input($uncachedContent[$i]->link);
-			$doc->init();
-			$strip_content = strip_tags($uncachedContent[$i]->description);
-			//$doc->getContent()
+		if($type == "RSS") {
+			for($i=count($uncachedContent)-1; $i>=0; $i--) {
+				$doc = new Reader();
+				$doc->input($uncachedContent[$i]->link);
+				$doc->init();
+				$strip_content = $this->html2txt($uncachedContent[$i]->content);
+				//$doc->getContent()
 
-			$img_arr = array();
-			$img_arr = $doc->reImg();
+				$img_arr = array();
+				$img_arr = $doc->reImg();
 
-			if(count($img_arr) == 0)
-				$img = "";
-			else 
-				$img = $img_arr[0];
+				if(count($img_arr) == 0)
+					$img = "";
+				else 
+					$img = $img_arr[0];
 
-			$mysql->insertContent($tableName, $uncachedContent[$i]->title, $uncachedContent[$i]->link, $uncachedContent[$i]->description, $uncachedContent[$i]->author, $uncachedContent[$i]->category, $uncachedContent[$i]->comments, $uncachedContent[$i]->enclosure, $uncachedContent[$i]->guid, $uncachedContent[$i]->pubDate, $uncachedContent[$i]->source, $strip_content, $img);
+				$mysql->insertContent($type, $tableName, $uncachedContent[$i]->title, $uncachedContent[$i]->link, $uncachedContent[$i]->description, $uncachedContent[$i]->author, $uncachedContent[$i]->category, $uncachedContent[$i]->comments, $uncachedContent[$i]->enclosure, $uncachedContent[$i]->guid, $uncachedContent[$i]->pubDate, $uncachedContent[$i]->source, mb_substr($strip_content,0,250,"utf8"), $img);
+			}
+		} else if ($type == "ATOM") {
+			for($i = count($uncachedContent)-1; $i >= 0; $i--) {
+
+				// Get Article Link.
+				$articleLink = "";
+				echo count($uncachedContent[$i]->link);
+				if(count($uncachedContent[$i]->link) > 1) {
+					for($j = 0; $j < count($uncachedContent[$i]->link); $j++){
+						if ($uncachedContent[$i]->link[$j]->attributes()->rel == "self") {
+							$articleLink = $uncachedContent[$i]->link[$j]->attributes()->href;
+							break;
+						}
+					}
+				} else {
+					$articleLink = $uncachedContent[$i]->link->attributes()->href;
+				}
+
+				$doc = new Reader();
+				$doc->input($articleLink);
+				$doc->init();
+				$strip_content = $this->html2txt($uncachedContent[$i]->content);
+
+				$img_arr = array();
+				$img_arr = $doc->reImg();
+				if(count($img_arr) == 0)
+					$img = "";
+				else 
+					$img = $img_arr[0];
+
+				$mysql->insertContent($type, $tableName, $uncachedContent[$i]->title, $articleLink, $uncachedContent[$i]->content, $uncachedContent[$i]->author->name, $uncachedContent[$i]->category->attributes()->term, "", "", $uncachedContent[$i]->id, $uncachedContent[$i]->published, "", mb_substr($strip_content,0,250,"utf8"), $img);
+			}
 		}
+		
 		echo "\n\n[EXIT] INSERT COMPELETE!\n";
 	}
 
@@ -218,18 +329,40 @@ class RSS_Crawler {
 	*		Same: return true. local and RSS feed are consistent.
 	*		Different: return false. RSS feed has new content.
 	*/
-	private function isUpdated($rss) {
-		global $tableName, $mysql;
+	private function isUpdated($channel) {
+		global $tableName, $mysql, $type;
 
 		$oldMax = $mysql->getOldMaxLink($tableName);
 
-		//echo "\n\n Table: ".$tableName.", ".$rss->channel->item[0]->link;
+		//echo "\n\n Table: ".$tableName.", ".$channel->item[0]->link;
+		if($type == "RSS") {
+			if ($oldMax != $channel->item[0]->link) {
+				return false;
+			} else {
+				return true;
+			}
+		} else if ($type == "ATOM") {
 
-		if ($oldMax != $rss->channel->item[0]->link) {
-			return false;
-		} else {
-			return true;
+			// Get Article Link.
+			$articleLink = "";
+			if(count($channel->entry[0]->link) > 1) {
+				for($j = 0; $j < count($channel->entry[0]->link); $j++){
+					if ($channel->entry[0]->link[$j]->attributes()->rel == "self") {
+						$articleLink = $channel->entry[0]->link[$j]->attributes()->href;
+						break;
+					}
+				}
+			} else {
+				$articleLink = $channel->entry[0]->link->attributes()->href;
+			}
+
+			if ($oldMax != $articleLink) {
+				return false;
+			} else {
+				return true;
+			}
 		}
+
 	}
 
 	/**
@@ -238,38 +371,56 @@ class RSS_Crawler {
 	*	Post:	Return an object array of RSS content which hasn't been cached. 
 	*			Return NULL if nothing new.
 	*/
-	private function returnUncachedContent($rss) {
-		global $count, $mysql, $tableName;
+	private function returnUncachedContent($channel) {
+		global $mysql, $tableName, $type;
 		$uncachedContent[] = new stdClass();
 		echo ">> Find uncached content...\n";
 		echo "Checking version...\n";
-		if($this->isUpdated($rss) == true) {
+		if($this->isUpdated($channel) == true) {
 			echo "\n[EXIT] All cached, cya!\n\n";
 			return NULL;
 		} else {
 			echo "Seems new articles is published, Let's catch'em!\n";
 			$oldMax = $mysql->getOldMaxLink($tableName);
 
-			for ($i = 0; $i < $count; $i++) {
-				if ($oldMax != $rss->channel->item[$i]->link) {
-					$uncachedContent[$i] = clone $rss->channel->item[$i];
-				} else {
-					break;
+			if ($type == "RSS") {
+				$count = count($channel->item);
+
+				for ($i = 0; $i < $count; $i++) {
+					if ($oldMax != $channel->item[$i]->link) {
+						$uncachedContent[$i] = clone $channel->item[$i];
+					} else {
+						break;
+					}
+				}
+			} else if ($type == "ATOM") {
+				$count = count($channel->entry);
+
+				for ($i = 0; $i < $count; $i++) {
+
+					$articleLink = "";
+					if(count($channel->entry[$i]->link) > 1) {
+						for($j = 0; $j < count($channel->entry[$i]->link); $j++){
+							if ($channel->entry[$i]->link[$j]->attributes()->rel == "self") {
+								$articleLink = $channel->entry[$i]->link[$j]->attributes()->href;
+								break;
+							}
+						}
+					} else {
+						$articleLink = $channel->entry[$i]->link->attributes()->href;
+					}
+
+					if ($oldMax != $articleLink) {
+						$uncachedContent[$i] = clone $channel->entry[$i];
+					} else {
+						break;
+					}
 				}
 			}
+			
 			echo "New article has been picked!\n";
 			return $uncachedContent;
 		}
-	}
-
-	/**
-	*	Get amount of RSS content
-	*
-	*	Post:	Return an interger of amount of RSS content
-	*/
-	public function getContentCount() {
-		global $count;
-		return $count;
 	}
 
 	/**

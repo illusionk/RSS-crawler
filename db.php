@@ -10,12 +10,13 @@ class c2mysql {
 	public function __construct() {
 		global $link, $dbhost, $dbuser, $dbpass, $dbname;
 		// Init
-		$dbhost = "host";
-		$dbuser = "user";
-		$dbpass = "pass";
-		$dbname = "database";
+		$dbhost = "127.0.0.1";
+		$dbuser = "root";
+		$dbpass = "";
+		$dbname = "";
+		$dbport = "3306";
 
-		$link = mysqli_connect($dbhost, $dbuser, $dbpass, $dbname);
+		$link = mysqli_connect($dbhost, $dbuser, $dbpass, $dbname, $dbport);
 		if (!$link) {
 		    die('Could not connect: ' . mysqli_error($link));
 		}
@@ -53,7 +54,7 @@ class c2mysql {
 		echo "TABLE ".$table." created!\n";
 	}
 
-	public function insertContent($table, $title, $clink, $description, $author, $category, $comments, $enclosure, $guid, $pubDate, $source, $summary, $img) {
+	public function insertContent($type, $table, $title, $clink, $description, $author, $category, $comments, $enclosure, $guid, $pubDate, $source, $summary, $img) {
 		global $link;
 		// TABLE not exist
 		if ($this->checkTableExist($table) == false) {
@@ -67,51 +68,58 @@ class c2mysql {
 			echo "Article Exist!\n";
 			return;
 		}
+		if ($type == "RSS"){
+			preg_match("/.*, [0]*([0-9]{1,}) (.*) (.*) [0]*([0-9]{1,}):[0]*([0-9]{1,}):[0]*([0-9]{1,}) .*/", $pubDate, $time);
 
-		preg_match("/.*, [0]*([0-9]{1,}) (.*) (.*) [0]*([0-9]{1,}):[0]*([0-9]{1,}):[0]*([0-9]{1,}) .*/", $pubDate, $time);
+			switch($time[2]) {
+				case "Dec":
+					$time[2] = "12";
+					break;
+				case "Nov":
+					$time[2] = "11";
+					break;
+				case "Oct":
+					$time[2] = "10";
+					break;
+				case "Sep":
+					$time[2] = "9";
+					break;
+				case "Aug":
+					$time[2] = "8";
+					break;
+				case "Jul":
+					$time[2] = "7";
+					break;
+				case "Jun":
+					$time[2] = "6";
+					break;
+				case "May":
+					$time[2] = "5";
+					break;
+				case "Apr":
+					$time[2] = "4";
+					break;
+				case "Mar":
+					$time[2] = "3";
+					break;
+				case "Feb":
+					$time[2] = "2";
+					break;
+				case "Jan":
+					$time[2] = "1";
+					break;
+			}
 
-		switch($time[2]) {
-			case "Dec":
-				$time[2] = "12";
-				break;
-			case "Nov":
-				$time[2] = "11";
-				break;
-			case "Oct":
-				$time[2] = "10";
-				break;
-			case "Sep":
-				$time[2] = "9";
-				break;
-			case "Aug":
-				$time[2] = "8";
-				break;
-			case "Jul":
-				$time[2] = "7";
-				break;
-			case "Jun":
-				$time[2] = "6";
-				break;
-			case "May":
-				$time[2] = "5";
-				break;
-			case "Apr":
-				$time[2] = "4";
-				break;
-			case "Mar":
-				$time[2] = "3";
-				break;
-			case "Feb":
-				$time[2] = "2";
-				break;
-			case "Jan":
-				$time[2] = "1";
-				break;
+			// INSERT
+			$sql = "INSERT INTO `".$table."` (`id`, `title`, `link`, `description`, `author`, `category`, `comments`, `enclosure`, `guid`, `pubDate`, `day`, `month`, `year`, `hour`, `minute`, `source`, `summary`, `img`, `dread`, `dsave`) VALUES ('".md5($clink)."', '".mysqli_real_escape_string($link, $title)."', '".$clink."', '".mysqli_real_escape_string($link, $description)."', '".$author."', '".$category."', '".$comments."', '".$enclosure."', '".$guid."', '".$pubDate."', '".$time[1]."', '".$time[2]."', '".$time[3]."', '".$time[4]."', '".$time[5]."', '".$source."', '".mysqli_real_escape_string($link, $summary)."', '".$img."','0', '0');";
+		} else if ($type == "ATOM") {
+			preg_match("/([0-9]{4})-([0-9]{1,})-([0-9]{1,})T([0-9]{1,}):([0-9]{1,}):([0-9]{1,})/", $pubDate, $time);
+
+			// INSERT
+			$sql = "INSERT INTO `".$table."` (`id`, `title`, `link`, `description`, `author`, `category`, `comments`, `enclosure`, `guid`, `pubDate`, `day`, `month`, `year`, `hour`, `minute`, `source`, `summary`, `img`, `dread`, `dsave`) VALUES ('".md5($clink)."', '".mysqli_real_escape_string($link, $title)."', '".$clink."', '".mysqli_real_escape_string($link, $description)."', '".$author."', '".$category."', '".$comments."', '".$enclosure."', '".$guid."', '".$pubDate."', '".$time[3]."', '".$time[2]."', '".$time[1]."', '".$time[4]."', '".$time[5]."', '".$source."', '".mysqli_real_escape_string($link, $summary)."', '".$img."','0', '0');";
 		}
-
-		// INSERT
-		$sql = "INSERT INTO `".$table."` (`id`, `title`, `link`, `description`, `author`, `category`, `comments`, `enclosure`, `guid`, `pubDate`, `day`, `month`, `year`, `hour`, `minute`, `source`, `summary`, `img`, `dread`, `dsave`) VALUES ('".md5($clink)."', '".mysqli_real_escape_string($link, $title)."', '".$clink."', '".mysqli_real_escape_string($link, $description)."', '".$author."', '".$category."', '".$comments."', '".$enclosure."', '".$guid."', '".$time[0]."', '".$time[1]."', '".$time[2]."', '".$time[3]."', '".$time[4]."', '".$time[5]."', '".$source."', '".mysqli_real_escape_string($link, $summary)."', '".$img."','0', '0');";
-		$result = mysqli_query($link, $sql) or die('Insert: ' . mysqli_error($link));
+		
+		$result = mysqli_query($link, $sql) or trigger_error('Insert: ' . mysqli_error($link));
 		echo "INSERT complete!\n";
 	}
 }
