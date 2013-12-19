@@ -24,5 +24,7 @@ unset($engadget);
 sleep(2);
 $horny = new RSS_Crawler("http://feeds.feedburner.com/blogspot/VQFAg?format=xml");
 unset($horny);
-
+sleep(2);
+$yahoo_baseball = new RSS_Crawler("http://tw.news.yahoo.com/rss/baseball");
+unset($yahoo_baseball);
 ?>

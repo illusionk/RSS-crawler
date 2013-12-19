@@ -1,14 +1,16 @@
 <?php
 class c2mysql {
 	private $link;
+	private $user_db;
 
 	public function __construct() {
-		global $link;
+		global $link, $user_db;
 		// Init
 		$dbhost = "127.0.0.1";
-		$dbuser = "root";
-		$dbpass = "";
-		$dbname = "";
+		$dbuser = "username";
+		$dbpass = "password";
+		$dbname = "";			// RSS DB (REQUIRED)
+		$user_db = "";			// Sidebar DB (REQUIRED)
 		$dbport = "3306";
 
 		$link = mysqli_connect($dbhost, $dbuser, $dbpass, $dbname, $dbport);
@@ -21,7 +23,7 @@ class c2mysql {
 
 	public function getOldMaxLink($table) {
 		global $link;
-		$sql = "SELECT `link` FROM `".$table."` ORDER BY `doc` DESC LIMIT 1;";
+		$sql = "SELECT `link` FROM `".$table."` ORDER BY `pubDate` DESC LIMIT 1;";
 		$result = mysqli_query($link, $sql);
 		$data = mysqli_fetch_array($result);
 
@@ -50,8 +52,8 @@ class c2mysql {
 	}
 
 	public function createSidebarItem($table, $title) {
-		global $link;
-		$sql = "INSERT INTO `reader_user`.`sidebar` (`doc`, `name`, `url`, `sourceId`) VALUES (NULL, '".$title."', '', '".$table."');";
+		global $link, $user_db;
+		$sql = "INSERT INTO `".$user_db."`.`sidebar` (`doc`, `name`, `url`, `sourceId`) VALUES (NULL, '".$title."', '', '".$table."');";
 		$result = mysqli_query($link, $sql) or die("Couldn't create SideBar item ".mysqli_error($link)."\n");
 		echo "Sidebar ".$table." (".$title.") created!\n";
 	}
