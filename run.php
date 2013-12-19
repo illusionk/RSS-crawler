@@ -16,7 +16,7 @@ sleep(2);
 $googleNews = new RSS_Crawler("http://news.google.com.tw/news?pz=1&cf=all&ned=tw&hl=zh-TW&output=rss");
 unset($googleNews);
 sleep(2);
-$UDN = new RSS_Crawler("http://udn.com/udnrss/BREAKINGNEWS1.xml");
+$UDN = new RSS_Crawler("http://mag.udn.com/udnrss/campus_rss.xml");
 unset($UDN);
 sleep(2);
 $engadget = new RSS_Crawler("http://chinese.engadget.com/rss.xml");

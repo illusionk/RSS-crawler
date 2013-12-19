@@ -7,8 +7,8 @@ class c2mysql {
 		global $link, $user_db;
 		// Init
 		$dbhost = "127.0.0.1";
-		$dbuser = "username";
-		$dbpass = "password";
+		$dbuser = "";
+		$dbpass = "";
 		$dbname = "";			// RSS DB (REQUIRED)
 		$user_db = "";			// Sidebar DB (REQUIRED)
 		$dbport = "3306";

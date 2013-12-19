@@ -1,9 +1,7 @@
 <?php 
 
 	/* based on Readability.php of Arc90 */
-	header('Content-type: text/html; charset=utf-8'); 
-	header('Vary: Accept-Language'); 
-	
+
 	require_once('JSLikeHTMLElement.php');
 
 	class Reader{
@@ -456,7 +454,7 @@
 		public function getImage($articleContent){
 
 			$tempImg = $articleContent->getElementsByTagName('img');
-
+			$flag=0;
 			if($tempImg->length == 0){
 				return null;
 			}
@@ -471,16 +469,25 @@
 			for($i=0;$i<$l;$i++){
 				if(preg_match('/blog.yam.com/',$this->url)){
 					$temp = $tempImg->item($i)->getAttribute('data-src');
+					if($temp == NULL){
+						$flag = 1;
+					}
 				}
 				else{
 					$temp = $tempImg->item($i)->getAttribute('src');
-					
+					if($temp == NULL){
+						$flag = 1;
+
+					}
 				}
-				if(preg_match("/http/",$temp)){
-					$image[]=$temp;
-				}
-				else{
-					$image[]=dirname($this->url).'/'.$temp;
+				if($flag == 0){
+					if(preg_match("/http/",$temp)){
+						$image[]=$temp;
+					}
+					else{
+
+						$image[]=dirname($this->url).'/'.$temp;
+					}
 				}
 			}
 
@@ -682,4 +689,18 @@
 		}
 
 	}
-?>
+	
+	/*$doc = new Reader();
+	$doc->input("http://tw.news.yahoo.com/mlb-王建民與紅人隊簽小聯盟合約-073842024.html");
+	$doc->init();
+	$content = $doc->getOrigContent();
+	//echo $content;
+	//$arr = $doc->reEmbed();
+
+	//print_r($arr);
+	//print_r($score);
+	$arr = array();
+	$arr = $doc->reImg();
+	if($arr==NULL) echo "NULL";
+	echo "<div>";
+	print_r
