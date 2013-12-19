@@ -7,11 +7,12 @@ require("db.php");
 require("converter.php");
 
 /* Connention test, should remove after publish */
-//$test = new RSS_Crawler("http://feeds.feedburner.com/blogspot/VQFAg?format=xml");
+//$test = new RSS_Crawler("http://chinese.engadget.com/rss.xml");
 
 //http://udn.com/udnrss/BREAKINGNEWS1.xml
 //http://news.google.com.tw/news?pz=1&cf=all&ned=tw&hl=zh-TW&output=rss
 //http://chinese.engadget.com/rss.xml
+//http://feeds.feedburner.com/blogspot/VQFAg?format=xml
 
 /* RSS FEED INFORMATION
 echo "-- RSS information --\n";
@@ -109,6 +110,7 @@ class RSS_Crawler {
 
 		/* Convert XML to object */
 		$parsed = simplexml_load_string($result);
+		//print_r($parsed);
 
 		// ATOM or RSS
 		if(count($parsed->channel) == 0) {
@@ -247,7 +249,7 @@ class RSS_Crawler {
 					$articleLink = "";
 					if(count($content[$i]->link) > 1) {
 						for($j = 0; $j < count($content[$i]->link); $j++){
-							if ($content[$i]->link[$j]->attributes()->rel == "self") {
+							if ($content[$i]->link[$j]->attributes()->rel == "alternate") {
 								$articleLink = $content[$i]->link[$j]->attributes()->href;
 								break;
 							}
@@ -329,7 +331,7 @@ class RSS_Crawler {
 				echo count($uncachedContent[$i]->link);
 				if(count($uncachedContent[$i]->link) > 1) {
 					for($j = 0; $j < count($uncachedContent[$i]->link); $j++){
-						if ($uncachedContent[$i]->link[$j]->attributes()->rel == "self") {
+						if ($uncachedContent[$i]->link[$j]->attributes()->rel == "alternate") {
 							$articleLink = $uncachedContent[$i]->link[$j]->attributes()->href;
 							break;
 						}
@@ -385,7 +387,7 @@ class RSS_Crawler {
 			$articleLink = "";
 			if(count($channel->entry[0]->link) > 1) {
 				for($j = 0; $j < count($channel->entry[0]->link); $j++){
-					if ($channel->entry[0]->link[$j]->attributes()->rel == "self") {
+					if ($channel->entry[0]->link[$j]->attributes()->rel == "alternate") {
 						$articleLink = $channel->entry[0]->link[$j]->attributes()->href;
 						break;
 					}

@@ -6,9 +6,9 @@ class c2mysql {
 		global $link;
 		// Init
 		$dbhost = "127.0.0.1";
-		$dbuser = "user";
-		$dbpass = "pass";
-		$dbname = "database";
+		$dbuser = "root";
+		$dbpass = "";
+		$dbname = "";
 		$dbport = "3306";
 
 		$link = mysqli_connect($dbhost, $dbuser, $dbpass, $dbname, $dbport);
@@ -43,7 +43,7 @@ class c2mysql {
 			echo "Table already exists\n";
 			return;
 		}
-		$sql="CREATE TABLE `".$table."`(doc SERIAL, id VARCHAR(32), title VARCHAR(500), link VARCHAR(2083), description TEXT, author VARCHAR(200), category VARCHAR(2000), comments VARCHAR(2083), enclosure TEXT, guid VARCHAR(2083), pubDate VARCHAR(100), year VARCHAR(4), month VARCHAR(2), day VARCHAR(2), hour VARCHAR(2), minute VARCHAR(2), source VARCHAR(2083), summary TEXT, img VARCHAR(2083), dread BOOLEAN, dsave BOOLEAN);";
+		$sql="CREATE TABLE `".$table."`(doc SERIAL, id VARCHAR(32), title VARCHAR(500), link VARCHAR(2083), description TEXT, author VARCHAR(200), category VARCHAR(2000), comments VARCHAR(2083), enclosure TEXT, guid VARCHAR(2083), pubDate DATETIME, year VARCHAR(4), month VARCHAR(2), day VARCHAR(2), hour VARCHAR(2), minute VARCHAR(2), source VARCHAR(2083), summary TEXT, img VARCHAR(2083), dread BOOLEAN, dsave BOOLEAN) DEFAULT CHARACTER SET utf8 COLLATE utf8_general_ci;";
 
 		$result = mysqli_query($link, $sql) or die("Couldn't create TABLE ".mysqli_error($link)."\n");
 		echo "TABLE ".$table." created!\n";
@@ -112,13 +112,17 @@ class c2mysql {
 					break;
 			}
 
+			$date = $time[3]."-".$time[2]."-".$time[1]." ".$time[4].":".$time[5].":".$time[6];
+
 			// INSERT
-			$sql = "INSERT INTO `".$table."` (`id`, `title`, `link`, `description`, `author`, `category`, `comments`, `enclosure`, `guid`, `pubDate`, `day`, `month`, `year`, `hour`, `minute`, `source`, `summary`, `img`, `dread`, `dsave`) VALUES ('".md5($clink)."', '".mysqli_real_escape_string($link, $title)."', '".$clink."', '".mysqli_real_escape_string($link, $description)."', '".$author."', '".$category."', '".$comments."', '".$enclosure."', '".$guid."', '".$pubDate."', '".$time[1]."', '".$time[2]."', '".$time[3]."', '".$time[4]."', '".$time[5]."', '".$source."', '".mysqli_real_escape_string($link, $summary)."', '".$img."','0', '0');";
+			$sql = "INSERT INTO `".$table."` (`id`, `title`, `link`, `description`, `author`, `category`, `comments`, `enclosure`, `guid`, `pubDate`, `day`, `month`, `year`, `hour`, `minute`, `source`, `summary`, `img`, `dread`, `dsave`) VALUES ('".md5($clink)."', '".mysqli_real_escape_string($link, $title)."', '".$clink."', '".mysqli_real_escape_string($link, $description)."', '".$author."', '".$category."', '".$comments."', '".$enclosure."', '".$guid."', '".$date."', '".$time[1]."', '".$time[2]."', '".$time[3]."', '".$time[4]."', '".$time[5]."', '".$source."', '".mysqli_real_escape_string($link, $summary)."', '".$img."','0', '0');";
 		} else if ($type == "ATOM") {
 			preg_match("/([0-9]{4})-([0-9]{1,})-([0-9]{1,})T([0-9]{1,}):([0-9]{1,}):([0-9]{1,})/", $pubDate, $time);
 
+			$date = $time[1]."-".$time[2]."-".$time[3]." ".$time[4].":".$time[5].":".$time[6];
+
 			// INSERT
-			$sql = "INSERT INTO `".$table."` (`id`, `title`, `link`, `description`, `author`, `category`, `comments`, `enclosure`, `guid`, `pubDate`, `day`, `month`, `year`, `hour`, `minute`, `source`, `summary`, `img`, `dread`, `dsave`) VALUES ('".md5($clink)."', '".mysqli_real_escape_string($link, $title)."', '".$clink."', '".mysqli_real_escape_string($link, $description)."', '".$author."', '".$category."', '".$comments."', '".$enclosure."', '".$guid."', '".$pubDate."', '".$time[3]."', '".$time[2]."', '".$time[1]."', '".$time[4]."', '".$time[5]."', '".$source."', '".mysqli_real_escape_string($link, $summary)."', '".$img."','0', '0');";
+			$sql = "INSERT INTO `".$table."` (`id`, `title`, `link`, `description`, `author`, `category`, `comments`, `enclosure`, `guid`, `pubDate`, `day`, `month`, `year`, `hour`, `minute`, `source`, `summary`, `img`, `dread`, `dsave`) VALUES ('".md5($clink)."', '".mysqli_real_escape_string($link, $title)."', '".$clink."', '".mysqli_real_escape_string($link, $description)."', '".$author."', '".$category."', '".$comments."', '".$enclosure."', '".$guid."', '".$date."', '".$time[3]."', '".$time[2]."', '".$time[1]."', '".$time[4]."', '".$time[5]."', '".$source."', '".mysqli_real_escape_string($link, $summary)."', '".$img."','0', '0');";
 		}
 		
 		$result = mysqli_query($link, $sql) or trigger_error('Insert: ' . mysqli_error($link));
